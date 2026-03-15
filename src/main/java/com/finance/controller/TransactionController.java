@@ -1,6 +1,7 @@
 package com.finance.controller;
 
 import com.finance.dto.TransactionRequest;
+import com.finance.dto.TransactionResponse;
 import com.finance.entity.Transaction;
 import com.finance.entity.User;
 import com.finance.repository.TransactionRepository;
@@ -23,11 +24,12 @@ public class TransactionController {
     private final UserRepository userRepository;
 
     @PostMapping
-    public Transaction createTransaction(@RequestBody TransactionRequest request){
+    public TransactionResponse createTransaction(@RequestBody TransactionRequest request) {
         return service.createTransaction(request);
     }
+
     @GetMapping
-    public List<Transaction> getAllTransaction() {
+    public List<TransactionResponse> getAllTransactions() {
         return service.getAllTransaction();
     }
 
@@ -38,35 +40,36 @@ public class TransactionController {
     }
 
     @PutMapping("/{id}")
-    public Transaction updateTransaction(@PathVariable Long id, @RequestBody Transaction transaction) {
-        return service.updateTransaction(id, transaction);
+    public TransactionResponse updateTransaction(
+            @PathVariable Long id,
+            @RequestBody TransactionRequest request
+    ) {
+        return service.updateTransaction(id, request);
     }
 
     @GetMapping("/search")
-    public List<Transaction> searchByCategory(@RequestParam String category) {
+    public List<TransactionResponse> searchByCategory(@RequestParam String category) {
         return service.searchByCategory(category);
     }
 
+    @GetMapping("/{id}")
+    public TransactionResponse getTransactionById(@PathVariable Long id) {
+        return service.getTransactionById(id);
+    }
+
     @GetMapping("/recent")
-    public List<Transaction> recentTransaction() {
+    public List<TransactionResponse> getRecentTransactions() {
         return service.getRecentTransactions();
     }
 
     @GetMapping("/filter")
-    public List<Transaction> filterTransactions(
+    public List<TransactionResponse> filterTransactions(
+            @RequestParam Long userId,
             @RequestParam LocalDate startDate,
             @RequestParam LocalDate endDate,
             @RequestParam String category
     ) {
-
-        User user = getLoggedInUser();
-
-        return repository.findByUserIdAndDateBetweenAndCategory(
-                user.getId(),
-                startDate,
-                endDate,
-                category
-        );
+        return service.filterTransactions(userId, startDate, endDate, category);
     }
 
     private User getLoggedInUser() {

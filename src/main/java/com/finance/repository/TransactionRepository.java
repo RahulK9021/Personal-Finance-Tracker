@@ -6,17 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface TransactionRepository extends JpaRepository<Transaction , Long> {
     List<Transaction> findByUser(User user);
 
-    List<Transaction> findByUserAndCategory(User user , String category);
-
-    List<Transaction> findByUserAndDateBetween(User user , LocalDate start , LocalDate end );
-
-    List<Transaction> findByCategory(String category);
-
-    List<Transaction> findTop5ByOrderByDateDesc();
+    List<Transaction> findByUserAndCategoryIgnoreCase(User user , String category);
 
     List<Transaction> findTop5ByUserOrderByDateDesc(User user);
 
@@ -26,4 +21,6 @@ public interface TransactionRepository extends JpaRepository<Transaction , Long>
             LocalDate endDate,
             String category
     );
+
+    Optional<Transaction> findByIdAndUser(Long id, User user);
 }

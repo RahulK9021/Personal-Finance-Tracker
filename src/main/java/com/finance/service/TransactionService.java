@@ -1,12 +1,14 @@
 package com.finance.service;
 
 import com.finance.dto.TransactionRequest;
+import com.finance.dto.TransactionResponse;
 import com.finance.entity.Transaction;
+import com.finance.entity.TxnType;
 import com.finance.entity.User;
 import com.finance.repository.TransactionRepository;
+import com.finance.repository.TxnTypeRepository;
 import com.finance.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
@@ -19,35 +21,55 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class TransactionService {
 
     private final TransactionRepository repository;
     private final UserRepository userRepository;
+    private final TxnTypeRepository txnTypeRepository;
 
     private static final Logger log =
             LoggerFactory.getLogger(TransactionService.class);
 
-    public Transaction createTransaction(TransactionRequest request) {
+    public TransactionService(TransactionRepository repository, UserRepository userRepository, TxnTypeRepository txnTypeRepository) {
+        this.repository = repository;
+        this.userRepository = userRepository;
+
+        this.txnTypeRepository = txnTypeRepository;
+    }
+
+    public TransactionResponse createTransaction(TransactionRequest request) {
 
         User user = getLoggedInUser();
 
+        TxnType type = txnTypeRepository.findByName(request.getType());
+
+        if (type == null) {
+            throw new RuntimeException("Invalid transaction type: " + request.getType());
+        }
+
         Transaction transaction = new Transaction();
 
-        transaction.setUser(user);
         transaction.setAmount(request.getAmount());
         transaction.setCategory(request.getCategory());
         transaction.setDescription(request.getDescription());
         transaction.setDate(request.getDate());
-        transaction.setType(request.getType());
+        transaction.setType(type);
+        transaction.setUser(user);
         transaction.setCreatedAt(LocalDateTime.now());
 
-        return repository.save(transaction);
+        Transaction savedTransaction = repository.save(transaction);
+
+        return mapToResponse(savedTransaction);
     }
 
-    public List<Transaction> getAllTransaction() {
+    public List<TransactionResponse> getAllTransaction() {
+
         User user = getLoggedInUser();
-        return repository.findByUser(user);
+
+        return repository.findByUser(user)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     public void delete(Long id) {
@@ -64,7 +86,7 @@ public class TransactionService {
         repository.delete(transaction);
     }
 
-    public Transaction updateTransaction(Long id, Transaction transaction) {
+    public TransactionResponse updateTransaction(Long id, TransactionRequest request) {
 
         User user = getLoggedInUser();
 
@@ -75,40 +97,65 @@ public class TransactionService {
             throw new AccessDeniedException("You cannot update this transaction");
         }
 
-        if (transaction.getAmount() != null)
-            existing.setAmount(transaction.getAmount());
-        if (transaction.getCategory() != null)
-            existing.setCategory(transaction.getCategory());
-        if (transaction.getDescription() != null)
-            existing.setDescription(transaction.getDescription());
-        if (transaction.getDate() != null)
-            existing.setDate(transaction.getDate());
-        if (transaction.getType() != null)
-            existing.setType(transaction.getType());
+        if (request.getAmount() != null)
+            existing.setAmount(request.getAmount());
 
-        return repository.save(existing);
+        if (request.getCategory() != null)
+            existing.setCategory(request.getCategory());
+
+        if (request.getDescription() != null)
+            existing.setDescription(request.getDescription());
+
+        if (request.getDate() != null)
+            existing.setDate(request.getDate());
+
+        if (request.getType() != null) {
+
+            TxnType type = txnTypeRepository.findByName(request.getType());
+
+            if (type == null) {
+                throw new RuntimeException("Invalid transaction type: " + request.getType());
+            }
+
+            existing.setType(type);
+        }
+
+        Transaction saved = repository.save(existing);
+
+        return mapToResponse(saved);
     }
 
-    public List<Transaction> searchByCategory(String category) {
+    public List<TransactionResponse> searchByCategory(String category) {
 
         User user = getLoggedInUser();
-        return repository.findByUserAndCategory(user, category);
+
+        return repository.findByUserAndCategoryIgnoreCase(user, category)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
-    public List<Transaction> getRecentTransactions() {
+    public List<TransactionResponse> getRecentTransactions() {
 
         User user = getLoggedInUser();
-        return repository.findTop5ByUserOrderByDateDesc(user);
+
+        return repository.findTop5ByUserOrderByDateDesc(user)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
-    public List<Transaction> filterTransactions(
+    public List<TransactionResponse> filterTransactions(
             Long userId,
             LocalDate startDate,
             LocalDate endDate,
             String category
     ) {
         return repository
-                .findByUserIdAndDateBetweenAndCategory(userId, startDate, endDate, category);
+                .findByUserIdAndDateBetweenAndCategory(userId, startDate, endDate, category)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     private User getLoggedInUser() {
@@ -120,5 +167,34 @@ public class TransactionService {
 
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    public TransactionResponse getTransactionById(Long id) {
+
+        User user = getLoggedInUser();
+
+        Transaction transaction = repository.findByIdAndUser(id, user)
+                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+
+        return mapToResponse(transaction);
+    }
+
+    private TransactionResponse mapToResponse(Transaction transaction) {
+
+        TransactionResponse response = new TransactionResponse();
+
+        response.setId(transaction.getId());
+        response.setAmount(transaction.getAmount());
+        response.setCategory(transaction.getCategory());
+        response.setDescription(transaction.getDescription());
+        response.setDate(transaction.getDate());
+
+        if (transaction.getType() != null) {
+            response.setType(transaction.getType().getName());
+        }
+
+        response.setCreatedAt(transaction.getCreatedAt());
+
+        return response;
     }
 }

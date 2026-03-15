@@ -40,29 +40,30 @@ public class DashboardService {
 
         for (Transaction t : transactions) {
 
-            double amt;
-            if (t.getAmount() == null) {
-                amt = 0.0;
-            } else {
-                amt = t.getAmount();
+            double amt = t.getAmount() == null ? 0.0 : t.getAmount();
+
+            if (t.getType() == null) {
+                continue;
             }
 
-            if ("INCOME".equalsIgnoreCase(t.getType())) {
+            String typeName = t.getType().getName();
+
+            if ("INCOME".equalsIgnoreCase(typeName)) {
                 income += amt;
             }
-            else if ("EXPENSE".equalsIgnoreCase(t.getType())) {
+            else if ("EXPENSE".equalsIgnoreCase(typeName)) {
                 expense += amt;
             }
         }
 
-        double balance = income - expense;
+            double balance = income - expense;
 
-        Map<String , Double> calculation = new HashMap<>();
+            Map<String, Double> calculation = new HashMap<>();
 
-        calculation.put("totalIncome", income);
-        calculation.put("totalExpense", expense);
-        calculation.put("balance", balance);
+            calculation.put("totalIncome", income);
+            calculation.put("totalExpense", expense);
+            calculation.put("balance", balance);
 
-        return calculation;
+            return calculation;
+        }
     }
-}

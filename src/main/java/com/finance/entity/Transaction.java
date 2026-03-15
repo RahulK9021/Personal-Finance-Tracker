@@ -31,7 +31,9 @@ public class Transaction {
     @NotNull
     private LocalDate date;
 
-    private String type;
+    @ManyToOne
+    @JoinColumn(name = "type_id")
+    private TxnType type;
 
     @ManyToOne
     private User user;
