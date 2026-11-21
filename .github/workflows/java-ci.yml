@@ -30,4 +30,7 @@ jobs:
 
       - name: Build and Test Application
         run: ./mvnw clean package
-
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/finance_tracker
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: 9021
